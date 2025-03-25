@@ -1,0 +1,12 @@
+python-dotenv
+openai
+fastapi
+uvicorn
+tiktoken
+langchain
+langgraph
+qdrant-client
+langchain-community 
+langchain-openai
+sse-starlette==1.6.5
+pydantic_settings
