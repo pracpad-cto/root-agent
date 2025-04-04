@@ -1,0 +1,75 @@
+"""
+Learning Portal - SQL Database Models
+
+This module defines SQLAlchemy models for database tables.
+
+Author: Abhijit Raijada
+Designation: Principle Engineer
+Organization: GRS
+"""
+
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from app.db.sql import Base
+
+class User(Base):
+    """User model for authentication and user management"""
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    first_name = Column(String(100))
+    last_name = Column(String(100))
+    phone_number = Column(String(20))
+    hashed_password = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    questions = relationship("Question", back_populates="user")
+    responses = relationship("Response", back_populates="user")
+
+class Question(Base):
+    """Question model for storing user questions"""
+    __tablename__ = "questions"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    text = Column(Text, nullable=False)
+    module = Column(String(50), nullable=False, default="module1")
+    unit = Column(String(50))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User", back_populates="questions")
+    responses = relationship("Response", back_populates="question")
+
+class Response(Base):
+    """Response model for storing AI responses to questions"""
+    __tablename__ = "responses"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    question_id = Column(Integer, ForeignKey("questions.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    text = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    question = relationship("Question", back_populates="responses")
+    user = relationship("User", back_populates="responses")
+
+class Assessment(Base):
+    """Assessment model for storing user answer assessments"""
+    __tablename__ = "assessments"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    question_text = Column(Text, nullable=False)
+    user_answer = Column(Text, nullable=False)
+    guide = Column(Text, nullable=False)
+    analysis = Column(Text, nullable=False)
+    score = Column(Integer)
+    module = Column(String(50), nullable=False, default="module1")
+    unit = Column(String(50))
+    created_at = Column(DateTime(timezone=True), server_default=func.now()) 

@@ -9,7 +9,7 @@ Organization: GRS
 """
 
 from fastapi import APIRouter
-from app.api.endpoints import rag, health
+from app.api.endpoints import rag, health, users
 
 # Create main API router
 api_router = APIRouter()
@@ -17,3 +17,4 @@ api_router = APIRouter()
 # Include all endpoint routers
 api_router.include_router(health.router, prefix="")
 api_router.include_router(rag.router, prefix="")
+api_router.include_router(users.router, prefix="")

@@ -10,3 +10,8 @@ langchain-community
 langchain-openai
 sse-starlette==1.6.5
 pydantic_settings
+sqlalchemy
+pymysql
+cryptography
+email-validator
+passlib[bcrypt]

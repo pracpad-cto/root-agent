@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 
 from app.api import api_router
 from app.core.config import settings, logger
+from app.db.sql import init_db
 
 # Lifecycle management for FastAPI application
 @asynccontextmanager
@@ -24,7 +25,16 @@ async def lifespan(app: FastAPI):
     """
     # Initialization code here
     logger.info("API initialized")
+    
+    # Initialize database
+    try:
+        init_db()
+        logger.info("Database initialized")
+    except Exception as e:
+        logger.error(f"Database initialization error: {str(e)}")
+    
     yield
+    
     # Cleanup code here
     logger.info("API shutdown")
 

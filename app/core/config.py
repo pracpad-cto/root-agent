@@ -51,6 +51,17 @@ class Settings(BaseSettings):
     # Default collection settings
     DEFAULT_MODULE: str = "module1"
     
+    # Database settings
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        """Get the database URI with validation."""
+        database_url = os.getenv("DATABASE_URL")
+        if not database_url:
+            logger.error("DATABASE_URL environment variable is not set! Database functionality will not work.")
+            # You could raise an exception here if you want to force the application to exit
+            # raise ValueError("DATABASE_URL environment variable is not set")
+        return database_url
+    
     # Get normalized Qdrant URL
     @property
     def normalized_qdrant_url(self) -> str:
@@ -71,4 +82,9 @@ settings = Settings()
 
 # Log configuration on startup
 logger.info(f"Environment: {settings.ENVIRONMENT}")
-logger.info(f"Qdrant URL: {settings.normalized_qdrant_url}") 
+logger.info(f"Qdrant URL: {settings.normalized_qdrant_url}")
+# Log database connection status
+if settings.SQLALCHEMY_DATABASE_URI:
+    logger.info("Database connection configured successfully.")
+else:
+    logger.warning("Database connection is not configured properly!") 
