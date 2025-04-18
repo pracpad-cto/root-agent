@@ -79,3 +79,32 @@ def init_vector_store(collection_name: str = None):
     )
     
     return vector_store, client 
+
+def get_collections():
+    """
+    Get all collections from Qdrant and transform them into module information.
+    
+    Returns:
+        List of dictionaries with module information extracted from collection names
+    """
+    try:
+        client = init_qdrant_client()
+        collections_info = client.get_collections()
+        
+        # Extract module names from collection names (removing the "_docs" suffix)
+        modules = []
+        for collection in collections_info.collections:
+            name = collection.name
+            if name.endswith("_docs"):
+                module_name = name[:-5]  # Remove "_docs" suffix
+                modules.append({
+                    "id": module_name,
+                    "name": module_name.title(),  # Capitalize first letter for display
+                    "collection": name
+                })
+        
+        logger.info(f"Retrieved {len(modules)} modules from Qdrant collections")
+        return modules
+    except Exception as e:
+        logger.error(f"Error retrieving collections from Qdrant: {str(e)}")
+        return [] 

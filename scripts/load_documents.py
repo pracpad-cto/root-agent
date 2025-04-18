@@ -29,16 +29,25 @@ def main():
     parser.add_argument('--dir', type=str, default='./data/pdfs', help='Directory containing PDF files')
     parser.add_argument('--module', type=str, default='module1', help='Module identifier for collection name')
     parser.add_argument('--recreate', action='store_true', help='Recreate collection if it exists')
+    parser.add_argument('--no-ocr', action='store_true', help='Disable OCR processing for scanned documents')
+    parser.add_argument('--poppler-path', type=str, default=os.getenv('POPPLER_PATH', ''), 
+                        help='Path to poppler binaries for PDF to image conversion')
     args = parser.parse_args()
 
     # Generate collection name based on module
     collection_name = get_collection_name(args.module)
 
     logger.info(f"Loading documents from {args.dir} into collection {collection_name}")
+    logger.info(f"OCR processing: {'Disabled' if args.no_ocr else 'Enabled'}")
     
     try:
         # Load documents
-        load_pdf_directory(args.dir, collection_name)
+        load_pdf_directory(
+            directory_path=args.dir, 
+            collection_name=collection_name,
+            use_ocr=not args.no_ocr,
+            poppler_path=args.poppler_path
+        )
         logger.info("Documents loaded successfully!")
     except Exception as e:
         logger.error(f"Error loading documents: {str(e)}")

@@ -50,8 +50,42 @@ root/
 
 - **Question Answering**: Ask questions to the AI agent and receive responses based on indexed knowledge.
 - **Answer Analysis**: Analyze user answers against guidelines and provide detailed feedback.
+- **User Authentication**: JWT-based authentication with role-based access control.
+- **User Management**: Create and manage users with different roles.
+- **OCR Capabilities**: Process scanned image-based PDFs using optical character recognition.
 - **Health Check**: Simple endpoint to verify the API is running.
 - **CORS Support**: Configured to allow cross-origin requests.
+
+## Authentication System
+
+The application features a comprehensive JWT-based authentication system with role-based access control:
+
+### User Roles
+
+- **Regular User**: Basic access to the application
+- **Admin**: Access to user management and administrative functions
+- **Super Admin**: Full access to all features including the ability to create other admin users
+
+### Authentication Endpoints
+
+- **POST /login**: Authenticate a user and receive a JWT token
+- **POST /register**: Register a new user account (public endpoint)
+- **GET /me**: Get current user information
+- **GET /admin**: Admin-only test endpoint
+- **GET /superadmin**: Superadmin-only test endpoint
+
+### User Management Endpoints
+
+- **GET /users**: Get all users (admin access only)
+- **POST /users**: Create a new user (with role-based restrictions)
+- **GET /users/{user_id}**: Get a specific user (users can view their own profile, admins can view all)
+
+### API Access Requirements
+
+All endpoints, except the following public endpoints, require authentication:
+- **POST /login**: User authentication
+- **POST /register**: User registration
+- **GET /**: Health check endpoint
 
 ## Setup
 
@@ -59,6 +93,8 @@ root/
 
 - Python 3.8+
 - Qdrant (for vector storage)
+- Tesseract OCR (for processing scanned documents)
+- Poppler (for PDF to image conversion)
 
 ### Installation
 
@@ -79,12 +115,49 @@ root/
    pip install -r requirements.txt
    ```
 
-4. **Set up environment variables**:
+4. **Install Tesseract OCR and Poppler**:
+   
+   For Windows:
+   ```bash
+   # Install Tesseract OCR
+   # Download installer from https://github.com/UB-Mannheim/tesseract/wiki
+   
+   # Install Poppler
+   # Download from https://github.com/oschwartz10612/poppler-windows/releases/
+   ```
+   
+   For macOS:
+   ```bash
+   brew install tesseract
+   brew install poppler
+   ```
+   
+   For Ubuntu/Debian:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install tesseract-ocr
+   sudo apt-get install poppler-utils
+   ```
+
+5. **Set up environment variables**:
    Create a `.env` file in the root directory and add the following:
    ```plaintext
    OPENAI_API_KEY=<your-openai-api-key>
    QDRANT_URL=<your-qdrant-url>
    QDRANT_API_KEY=<your-qdrant-api-key>
+   DATABASE_URL=<your-database-url>
+   
+   # OCR settings
+   POPPLER_PATH=<path-to-poppler-bin-directory>  # e.g., C:\path\to\poppler\bin
+   
+   # JWT Authentication settings
+   SECRET_KEY=<your-secret-key>
+   ACCESS_TOKEN_EXPIRE_MINUTES=1440
+   ```
+
+   For production, generate a secure random secret key:
+   ```bash
+   python -c "import secrets; print(secrets.token_hex(32))"
    ```
 
 ### Loading Documents
@@ -96,6 +169,20 @@ python scripts/load_documents.py --dir ./data/pdfs --module module1
 ```
 
 You can customize the directory containing PDF files and the module identifier for the collection name.
+
+#### OCR Processing Options
+
+For documents that are scanned images, the loader will automatically use OCR:
+
+```bash
+# With OCR enabled (default)
+python scripts/load_documents.py --dir ./data/pdfs --module module1
+
+# Disable OCR processing
+python scripts/load_documents.py --dir ./data/pdfs --module module1 --no-ocr
+```
+
+The document loader first attempts to extract text directly from PDFs. If insufficient text is found, it automatically falls back to OCR processing.
 
 ### Running the Application Locally
 
@@ -130,3 +217,25 @@ This project is licensed under the MIT License.
 ## Contact
 
 For support, please contact [support@example.com](mailto:support@example.com).
+
+### Setting Up Authentication
+
+After setting up your environment variables, create a superadmin user:
+
+```bash
+python scripts/create_superadmin.py --email admin@example.com --password YourPassword
+```
+
+You can customize the email, password, first name, and last name using command-line arguments.
+
+### Securing Endpoints
+
+To access secured endpoints, first obtain a JWT token:
+
+1. POST to `/login` with your credentials
+2. Include the returned token in the Authorization header for subsequent requests:
+   ```
+   Authorization: Bearer <your-token>
+   ```
+
+Alternatively, new users can register by sending a POST request to `/register` with the required user information.

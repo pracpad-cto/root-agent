@@ -149,7 +149,7 @@ def create_agent():
     # Compile with config to ensure state is returned
     return workflow.compile()
 
-def get_qdrant_response(question: str, module: str = "module1", unit: Optional[str] = None, history: List[HistoryItem] = None) -> Dict:
+def get_qdrant_response(question: str, module: str = "module1", history: List[HistoryItem] = None) -> Dict:
     """
     Get a response from the RAG agent based on a question and conversation history.
     """
@@ -172,8 +172,7 @@ def get_qdrant_response(question: str, module: str = "module1", unit: Optional[s
         "messages": messages,
         "context": [],
         "references": [],
-        "module": module,
-        "unit": unit
+        "module": module
     }
     
     # Run chain with state
@@ -193,25 +192,37 @@ def get_qdrant_response(question: str, module: str = "module1", unit: Optional[s
         }
 
 # Implement the streaming response function
-async def get_qdrant_response_stream(question: str, module: str = "module1", unit: Optional[str] = None, history: List[HistoryItem] = None):
+async def get_qdrant_response_stream(question: str, module: str = "module1", history: List[HistoryItem] = None):
     """
     Get a streaming response from the RAG agent.
     """
-    # This is a placeholder for the streaming implementation
-    # In a real implementation, this would use async generators with SSE
+    # Get the full response first
+    response = get_qdrant_response(question, module, history)
+    answer = response['answer']
     
-    # For now, we'll simulate streaming by getting the full response
-    # and yielding it in chunks
-    response = get_qdrant_response(question, module, unit, history)
+    # Properly escape content to avoid issues with quotes and special characters
+    import json
     
-    # Yield the response as JSON in Server-Sent Events format
-    yield f"data: {{'content': '{response['answer']}'}}\n\n"
+    # Split response into smaller chunks (sentences or parts)
+    import re
+    # Split by sentence endings or markdown headers
+    chunks = re.split(r'(?<=[.!?])\s+|\n(?=#+\s+)', answer)
+    
+    # Send each chunk separately for a smoother streaming experience
+    for chunk in chunks:
+        if chunk.strip():  # Only send non-empty chunks
+            content_json = json.dumps({"content": chunk + " "})  # Add space after each chunk
+            yield f"data: {content_json}\n\n"
+            # Small delay to simulate streaming (optional)
+            import asyncio
+            await asyncio.sleep(0.1)
     
     # Done event
-    yield "data: {'done': true}\n\n"
+    done_json = json.dumps({"done": True})
+    yield f"data: {done_json}\n\n"
 
 # Function for analyzing user answers
-async def get_answer_analysis(question: str, user_answer: str, guide: str, module: str = "module1", unit: Optional[str] = None) -> Dict:
+async def get_answer_analysis(question: str, user_answer: str, guide: str, module: str = "module1") -> Dict:
     """
     Analyze a user's answer against a guide and relevant context.
     """
@@ -279,7 +290,7 @@ async def get_answer_analysis(question: str, user_answer: str, guide: str, modul
         }
 
 # Streaming version of the analysis function
-async def get_streaming_analysis(question: str, user_answer: str, guide: str, module: str = "module1", unit: Optional[str] = None):
+async def get_streaming_analysis(question: str, user_answer: str, guide: str, module: str = "module1"):
     """
     Get a streaming analysis of a user's answer.
     """
@@ -288,13 +299,19 @@ async def get_streaming_analysis(question: str, user_answer: str, guide: str, mo
     
     # For now, we'll simulate streaming by getting the full analysis
     # and yielding it in chunks
-    response = await get_answer_analysis(question, user_answer, guide, module, unit)
+    response = await get_answer_analysis(question, user_answer, guide, module)
+    
+    # Properly escape content to avoid issues with quotes and special characters
+    import json
     
     # Yield the analysis as JSON in Server-Sent Events format
-    yield f"data: {{'content': '{response['analysis']}'}}\n\n"
+    content_json = json.dumps({"content": response['analysis']})
+    yield f"data: {content_json}\n\n"
     
     # Yield the score
-    yield f"data: {{'score': {response['score']}}}\n\n"
+    score_json = json.dumps({"score": response['score']})
+    yield f"data: {score_json}\n\n"
     
     # Done event
-    yield "data: {'done': true}\n\n" 
+    done_json = json.dumps({"done": True})
+    yield f"data: {done_json}\n\n" 

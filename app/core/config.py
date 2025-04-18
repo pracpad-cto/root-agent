@@ -13,6 +13,7 @@ import os
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 import logging
+from secrets import token_hex
 
 # Load environment variables from .env file
 load_dotenv(override=True)
@@ -50,6 +51,11 @@ class Settings(BaseSettings):
     
     # Default collection settings
     DEFAULT_MODULE: str = "module1"
+    
+    # JWT Authentication settings
+    SECRET_KEY: str = os.getenv("SECRET_KEY", token_hex(32))
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24 hours by default
     
     # Database settings
     @property

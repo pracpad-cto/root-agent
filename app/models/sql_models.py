@@ -8,10 +8,17 @@ Designation: Principle Engineer
 Organization: GRS
 """
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+import enum
 from app.db.sql import Base
+
+class UserRole(str, enum.Enum):
+    """Enum for user roles"""
+    REGULAR = "regular"
+    ADMIN = "admin"
+    SUPERADMIN = "superadmin"
 
 class User(Base):
     """User model for authentication and user management"""
@@ -23,6 +30,7 @@ class User(Base):
     last_name = Column(String(100))
     phone_number = Column(String(20))
     hashed_password = Column(String(255), nullable=False)
+    role = Column(Enum(UserRole), default=UserRole.REGULAR, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
