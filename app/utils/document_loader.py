@@ -25,7 +25,7 @@ from typing import List, Dict, Any, Optional
 # Default poppler path - should be configured in settings or env variable
 POPPLER_PATH = os.getenv("POPPLER_PATH", "")
 
-def load_pdf_directory(directory_path: str = "./data/pdfs", collection_name: str = None, use_ocr: bool = True, poppler_path: str = POPPLER_PATH):
+def load_pdf_directory(directory_path: str = "./data/pdfs", collection_name: str = None, use_ocr: bool = True, poppler_path: str = POPPLER_PATH, recreate: bool = False):
     """
     Load all PDF documents from a directory, split them into chunks,
     and store them in the Qdrant vector database.
@@ -35,6 +35,7 @@ def load_pdf_directory(directory_path: str = "./data/pdfs", collection_name: str
         collection_name: Name of the Qdrant collection to store embeddings
         use_ocr: Whether to use OCR for scanned PDFs
         poppler_path: Path to poppler binaries for PDF to image conversion
+        recreate: Whether to recreate the collection if it exists
     """
     if collection_name is None:
         collection_name = get_collection_name()
@@ -86,7 +87,7 @@ def load_pdf_directory(directory_path: str = "./data/pdfs", collection_name: str
         
         # Get or create Qdrant client and collection
         client = init_qdrant_client()
-        create_collection(client, collection_name, recreate=True)
+        create_collection(client, collection_name, recreate=recreate)
         
         # Process documents in batches to avoid API rate limits
         # and manage memory usage for large document sets

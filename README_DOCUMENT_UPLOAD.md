@@ -70,6 +70,8 @@ python scripts/load_documents.py --dir ./my_custom_pdfs
 python scripts/load_documents.py --module module1 --recreate
 ```
 
+This will delete the existing collection and create a new one. Without the `--recreate` flag, new documents will be added to the existing collection.
+
 #### Disable OCR (for faster processing if all documents are text-based):
 
 ```bash

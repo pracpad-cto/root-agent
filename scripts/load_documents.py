@@ -39,6 +39,7 @@ def main():
 
     logger.info(f"Loading documents from {args.dir} into collection {collection_name}")
     logger.info(f"OCR processing: {'Disabled' if args.no_ocr else 'Enabled'}")
+    logger.info(f"Collection mode: {'Recreate' if args.recreate else 'Append'}")
     
     try:
         # Load documents
@@ -46,7 +47,8 @@ def main():
             directory_path=args.dir, 
             collection_name=collection_name,
             use_ocr=not args.no_ocr,
-            poppler_path=args.poppler_path
+            poppler_path=args.poppler_path,
+            recreate=args.recreate
         )
         logger.info("Documents loaded successfully!")
     except Exception as e:
