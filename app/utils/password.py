@@ -5,7 +5,7 @@ This module provides utilities for secure password hashing and verification.
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
-Organization: GRS
+Organization: PracPad
 """
 
 from passlib.context import CryptContext

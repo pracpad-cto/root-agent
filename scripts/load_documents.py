@@ -6,7 +6,7 @@ into the Qdrant vector database.
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
-Organization: GRS
+Organization: PracPad
 """
 
 import sys

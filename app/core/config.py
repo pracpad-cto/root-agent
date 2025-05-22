@@ -6,7 +6,7 @@ for the application.
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
-Organization: GRS
+Organization: PracPad
 """
 
 import os

@@ -6,7 +6,7 @@ and provides functions for interacting with it.
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
-Organization: GRS
+Organization: PracPad
 """
 
 from qdrant_client import QdrantClient

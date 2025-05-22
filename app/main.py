@@ -5,7 +5,7 @@ This module initializes and configures the FastAPI application.
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
-Organization: GRS
+Organization: PracPad
 """
 
 from fastapi import FastAPI

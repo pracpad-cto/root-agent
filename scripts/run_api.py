@@ -5,7 +5,7 @@ This script provides a command-line interface for running the FastAPI applicatio
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
-Organization: GRS
+Organization: PracPad
 """
 
 import sys

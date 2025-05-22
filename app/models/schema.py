@@ -1,12 +1,11 @@
 """
-Learning Portal - Data Models
+Learning Portal - API Schema Models
 
-This module defines the Pydantic data models used throughout the application
-for request validation and response structuring.
+This module defines Pydantic models for API request and response schemas.
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
-Organization: GRS
+Organization: PracPad
 """
 
 from pydantic import BaseModel, Field

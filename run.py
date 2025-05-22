@@ -6,7 +6,7 @@ Execute with `python run.py` to start the API server.
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
-Organization: GRS
+Organization: PracPad
 """
 
 import sys

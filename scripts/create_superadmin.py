@@ -6,7 +6,7 @@ Run this script to initialize the first superadmin user.
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
-Organization: GRS
+Organization: PracPad
 """
 
 import sys

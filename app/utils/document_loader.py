@@ -7,7 +7,7 @@ handling scanned image-based PDFs.
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
-Organization: GRS
+Organization: PracPad
 """
 
 import os
@@ -89,6 +89,17 @@ def load_pdf_directory(directory_path: str = "./data/pdfs", collection_name: str
         client = init_qdrant_client()
         create_collection(client, collection_name, recreate=recreate)
         
+        # Get the count of existing points in the collection to avoid ID conflicts
+        start_id = 0
+        if not recreate:
+            try:
+                collection_info = client.get_collection(collection_name=collection_name)
+                start_id = collection_info.points_count
+                logger.info(f"Collection {collection_name} has {start_id} existing documents. New documents will start from ID {start_id}")
+            except Exception as e:
+                logger.error(f"Error getting collection info: {str(e)}")
+                # Continue with start_id = 0 if we can't get the count
+        
         # Process documents in batches to avoid API rate limits
         # and manage memory usage for large document sets
         batch_size = 100
@@ -121,7 +132,7 @@ def load_pdf_directory(directory_path: str = "./data/pdfs", collection_name: str
             for idx, (text, vector, metadata) in enumerate(zip(valid_texts, embedding_vectors, valid_metadatas)):
                 if text:  # Double-check for non-empty texts
                     points.append({
-                        "id": idx + i,
+                        "id": start_id + idx + i,
                         "vector": vector,
                         "payload": {
                             "page_content": text,

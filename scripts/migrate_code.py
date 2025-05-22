@@ -6,7 +6,7 @@ It creates backups of original files and copies the appropriate content to the n
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
-Organization: GRS
+Organization: PracPad
 """
 
 import os

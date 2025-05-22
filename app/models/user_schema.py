@@ -1,11 +1,11 @@
 """
-Learning Portal - User Schemas
+Learning Portal - User Schema Models
 
-This module defines Pydantic models for user data validation.
+This module defines Pydantic models for user-related API schemas.
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
-Organization: GRS
+Organization: PracPad
 """
 
 from pydantic import BaseModel, EmailStr, Field
