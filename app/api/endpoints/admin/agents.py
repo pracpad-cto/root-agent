@@ -23,6 +23,7 @@ from app.services.agent_service import AgentService
 from app.services.chat_service import ChatService
 from app.utils.auth import require_admin_access, require_superadmin_access
 from app.core.config import logger
+from app.db.qdrant import get_collections_detailed
 
 router = APIRouter(tags=["admin-agents"], prefix="/admin")
 
@@ -332,4 +333,39 @@ async def bulk_agent_operation(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to perform bulk operation"
+        )
+
+@router.get("/collections")
+async def get_qdrant_collections(
+    current_user: User = Depends(require_admin_access)
+):
+    """
+    Get all Qdrant vector collections with detailed information (admin only).
+    
+    This endpoint provides comprehensive information about all available
+    Qdrant collections including vector counts, configuration, and storage metrics.
+    
+    Access: Admin and Superadmin only
+    
+    Returns:
+        List of collections with detailed information including:
+        - Collection name and status
+        - Vector and point counts
+        - Configuration details (vector size, distance metric)
+        - Storage metrics (disk and RAM usage)
+    """
+    try:
+        collections = get_collections_detailed()
+        
+        return {
+            "total_collections": len(collections),
+            "collections": collections,
+            "retrieved_at": "now"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error retrieving Qdrant collections: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve Qdrant collections"
         ) 

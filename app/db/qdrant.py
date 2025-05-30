@@ -107,4 +107,59 @@ def get_collections():
         return modules
     except Exception as e:
         logger.error(f"Error retrieving collections from Qdrant: {str(e)}")
+        return []
+
+def get_collections_detailed():
+    """
+    Get detailed information about all collections from Qdrant.
+    
+    Returns:
+        List of dictionaries with detailed collection information
+    """
+    try:
+        client = init_qdrant_client()
+        collections_info = client.get_collections()
+        
+        detailed_collections = []
+        for collection in collections_info.collections:
+            try:
+                # Get collection info including vector count and configuration
+                collection_info = client.get_collection(collection.name)
+                
+                detailed_collection = {
+                    "name": collection.name,
+                    "status": collection_info.status,
+                    "vectors_count": collection_info.vectors_count if collection_info.vectors_count else 0,
+                    "points_count": collection_info.points_count if collection_info.points_count else 0,
+                    "segments_count": len(collection_info.segments) if collection_info.segments else 0,
+                    "config": {
+                        "vector_size": collection_info.config.params.vectors.size if collection_info.config.params.vectors else None,
+                        "distance": collection_info.config.params.vectors.distance.value if collection_info.config.params.vectors else None,
+                        "indexed": collection_info.config.params.vectors.hnsw_config is not None if collection_info.config.params.vectors else False
+                    } if collection_info.config else {},
+                    "disk_data_size": getattr(collection_info, 'disk_data_size', 0),
+                    "ram_data_size": getattr(collection_info, 'ram_data_size', 0)
+                }
+                detailed_collections.append(detailed_collection)
+                
+            except Exception as collection_error:
+                logger.warning(f"Error getting details for collection {collection.name}: {str(collection_error)}")
+                # Add basic info even if detailed info fails
+                detailed_collections.append({
+                    "name": collection.name,
+                    "status": "unknown",
+                    "vectors_count": 0,
+                    "points_count": 0,
+                    "segments_count": 0,
+                    "config": {},
+                    "disk_data_size": 0,
+                    "ram_data_size": 0,
+                    "error": str(collection_error)
+                })
+        
+        logger.info(f"Retrieved detailed information for {len(detailed_collections)} collections")
+        return detailed_collections
+        
+    except Exception as e:
+        logger.error(f"Error retrieving detailed collections from Qdrant: {str(e)}")
         return [] 
