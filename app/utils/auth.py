@@ -172,4 +172,63 @@ def role_required(allowed_roles: List[UserRole]):
 
 # Role-based dependencies for convenience
 get_admin_user = role_required([UserRole.ADMIN, UserRole.SUPERADMIN])
-get_superadmin_user = role_required([UserRole.SUPERADMIN]) 
+get_superadmin_user = role_required([UserRole.SUPERADMIN])
+
+# ===== AGENT MANAGEMENT SPECIFIC ACCESS CONTROLS =====
+
+def require_admin_access(current_user: User = Depends(get_current_active_user)) -> User:
+    """
+    Ensure user has admin or superadmin role for agent management.
+    
+    Args:
+        current_user: Current authenticated user
+        
+    Returns:
+        Current user if they have admin access
+        
+    Raises:
+        HTTPException: If user doesn't have admin access
+    """
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPERADMIN]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required for agent management"
+        )
+    return current_user
+
+def require_superadmin_access(current_user: User = Depends(get_current_active_user)) -> User:
+    """
+    Ensure user has superadmin role for system-level operations.
+    
+    Args:
+        current_user: Current authenticated user
+        
+    Returns:
+        Current user if they have superadmin access
+        
+    Raises:
+        HTTPException: If user doesn't have superadmin access
+    """
+    if current_user.role != UserRole.SUPERADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Superadmin access required for this operation"
+        )
+    return current_user
+
+def check_agent_access_level(user_role: UserRole) -> str:
+    """
+    Determine the access level for agent operations based on user role.
+    
+    Args:
+        user_role: User's role
+        
+    Returns:
+        Access level: 'public', 'admin', or 'superadmin'
+    """
+    if user_role == UserRole.SUPERADMIN:
+        return 'superadmin'
+    elif user_role == UserRole.ADMIN:
+        return 'admin'
+    else:
+        return 'public' 

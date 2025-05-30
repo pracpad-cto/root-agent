@@ -2,14 +2,14 @@
 Learning Portal - RAG Agent Implementation
 
 This module implements the Retrieval Augmented Generation (RAG) agent
-using LangGraph, LangChain, and the Qdrant vector database.
+using LangGraph, LangChain, and the Qdrant vector database with dynamic agent configurations.
 
 Author: Abhijit Raijada
 Designation: Principle Engineer
 Organization: GRS
 """
 
-from typing import Dict, TypedDict, List, Tuple, Annotated, Union, Optional
+from typing import Dict, TypedDict, List, Tuple, Annotated, Union, Optional, Any
 from langgraph.graph import Graph
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -19,32 +19,38 @@ from app.db.qdrant import init_vector_store, get_collection_name
 from app.models.schema import HistoryItem
 
 # Define state structure for the LangGraph agent
-# This maintains conversation context and retrieved information
+# This maintains conversation context, retrieved information, and agent configuration
 class AgentState(TypedDict):
     messages: List[str]     # Conversation messages
     context: List[str]      # Retrieved context from vector store
     references: List[Dict]  # Source references for citations
+    agent_config: Dict[str, Any]  # Dynamic agent configuration
 
 # Retrieval node for the RAG pattern
-# Searches for relevant documents based on the user's query
+# Searches for relevant documents based on the user's query and agent configuration
 def retrieve_node(state: AgentState) -> AgentState:
     """
-    Retrieve relevant context from the vector store based on the query.
+    Retrieve relevant context from the vector store based on the query and agent config.
     """
     last_message = state["messages"][-1]
+    agent_config = state.get("agent_config", {})
     
-    # Get module from state (with default for backward compatibility)
-    module = state.get("module", "module1")
-    
-    # Generate collection name
-    collection_name = get_collection_name(module)
+    # Get collection from agent config, with fallback to module or default
+    collection_name = None
+    if agent_config.get("qdrant_collection"):
+        collection_name = agent_config["qdrant_collection"]
+    else:
+        # Fallback to old module-based approach for backward compatibility
+        module = state.get("module", "module1")
+        collection_name = get_collection_name(module)
     
     try:
         # Initialize vector store
         _, client = init_vector_store(collection_name)
         
-        # Log only the essential information about the query
-        logger.info(f"Embedding query for collection '{collection_name}': {last_message[:50]}...")
+        # Log retrieval information
+        agent_name = agent_config.get("agent_name", "Unknown Agent")
+        logger.info(f"Retrieving for agent '{agent_name}' from collection '{collection_name}': {last_message[:50]}...")
         
         # Generate query embedding for semantic search
         embeddings = OpenAIEmbeddings()
@@ -64,7 +70,7 @@ def retrieve_node(state: AgentState) -> AgentState:
             state["context"] = ["No relevant information found in the documents."]
             state["references"] = []
         else:
-            # Only log the number of documents found, not all details
+            # Log the number of documents found
             logger.info(f"Found {len(search_result)} relevant documents for query")
             
             # Extract content and metadata from search results
@@ -89,18 +95,24 @@ def retrieve_node(state: AgentState) -> AgentState:
         state["references"] = []
     return state
 
-# Response generation function
+# Response generation function with dynamic system prompts
 def generate_response(state: AgentState) -> AgentState:
     """
-    Generate a response based on the retrieved context and query.
+    Generate a response based on the retrieved context, query, and agent configuration.
     """
-    # Create prompt with system instruction and context
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are a helpful AI assistant specialized in analyzing information and answering questions. 
+    agent_config = state.get("agent_config", {})
+    
+    # Get dynamic system prompt or use default
+    system_prompt = agent_config.get("system_prompt", 
+        """You are a helpful AI assistant specialized in analyzing information and answering questions. 
         Format your responses in markdown to make them visually appealing and easy to read.
         Use the following context to answer the question.
         
-        Context: {context}"""),
+        Context: {context}""")
+    
+    # Create prompt with dynamic system instruction and context
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt + "\n\nContext: {context}"),
         ("human", "{question}")
     ])
     
@@ -115,7 +127,8 @@ def generate_response(state: AgentState) -> AgentState:
     question = state["messages"][-1]
     
     # Log the OpenAI API call for monitoring
-    logger.info(f"OpenAI API Call - Model: gpt-4 - Prompt: System prompt with context and question: '{question[:50]}...'")
+    agent_name = agent_config.get("agent_name", "Unknown Agent")
+    logger.info(f"OpenAI API Call - Agent: {agent_name} - Model: gpt-4 - Question: '{question[:50]}...'")
     
     # Generate response
     response = chain.invoke({
@@ -149,9 +162,18 @@ def create_agent():
     # Compile with config to ensure state is returned
     return workflow.compile()
 
-def get_qdrant_response(question: str, module: str = "module1", history: List[HistoryItem] = None) -> Dict:
+# NEW: Dynamic agent response function
+def get_agent_response(question: str, agent_config: Dict[str, Any], history: List = None) -> Dict:
     """
-    Get a response from the RAG agent based on a question and conversation history.
+    Get a response from the RAG agent using dynamic agent configuration.
+    
+    Args:
+        question: User's question
+        agent_config: Dynamic agent configuration with system_prompt, collection, etc.
+        history: Conversation history
+        
+    Returns:
+        Response dictionary with answer and references
     """
     # Initialize agent
     chain = create_agent()
@@ -162,17 +184,20 @@ def get_qdrant_response(question: str, module: str = "module1", history: List[Hi
     # Add conversation history if available
     if history:
         for item in history:
-            messages.append(item.content)
+            if isinstance(item, dict):
+                messages.append(item.get('content', str(item)))
+            else:
+                messages.append(str(item))
     
     # Add current question to messages
     messages.append(question)
     
-    # Initialize state
+    # Initialize state with agent configuration
     state = {
         "messages": messages,
         "context": [],
         "references": [],
-        "module": module
+        "agent_config": agent_config
     }
     
     # Run chain with state
@@ -185,19 +210,28 @@ def get_qdrant_response(question: str, module: str = "module1", history: List[Hi
             "references": result["references"]
         }
     except Exception as e:
-        logger.error(f"Error in RAG agent: {str(e)}")
+        agent_name = agent_config.get("agent_name", "Unknown Agent")
+        logger.error(f"Error in RAG agent '{agent_name}': {str(e)}")
         return {
             "answer": "I'm sorry, I encountered an error while processing your question.",
             "references": []
         }
 
-# Implement the streaming response function
-async def get_qdrant_response_stream(question: str, module: str = "module1", history: List[HistoryItem] = None):
+# NEW: Streaming response with dynamic agent configuration
+async def get_agent_response_stream(question: str, agent_config: Dict[str, Any], history: List = None):
     """
-    Get a streaming response from the RAG agent.
+    Get a streaming response from the RAG agent using dynamic agent configuration.
+    
+    Args:
+        question: User's question
+        agent_config: Dynamic agent configuration
+        history: Conversation history
+        
+    Yields:
+        Response chunks for streaming
     """
     # Get the full response first
-    response = get_qdrant_response(question, module, history)
+    response = get_agent_response(question, agent_config, history)
     answer = response['answer']
     
     # Properly escape content to avoid issues with quotes and special characters
@@ -221,7 +255,43 @@ async def get_qdrant_response_stream(question: str, module: str = "module1", his
     done_json = json.dumps({"done": True})
     yield f"data: {done_json}\n\n"
 
-# Function for analyzing user answers
+# BACKWARD COMPATIBILITY: Keep existing functions for legacy support
+def get_qdrant_response(question: str, module: str = "module1", history: List[HistoryItem] = None) -> Dict:
+    """
+    Get a response from the RAG agent based on a question and conversation history.
+    [LEGACY] This function is maintained for backward compatibility.
+    """
+    # Create a default agent config for backward compatibility
+    agent_config = {
+        "agent_name": "Legacy Agent",
+        "system_prompt": """You are a helpful AI assistant specialized in analyzing information and answering questions. 
+        Format your responses in markdown to make them visually appealing and easy to read.
+        Use the following context to answer the question.""",
+        "qdrant_collection": None,  # Will use module-based collection
+        "module": module
+    }
+    
+    return get_agent_response(question, agent_config, history)
+
+async def get_qdrant_response_stream(question: str, module: str = "module1", history: List[HistoryItem] = None):
+    """
+    Get a streaming response from the RAG agent.
+    [LEGACY] This function is maintained for backward compatibility.
+    """
+    # Create a default agent config for backward compatibility
+    agent_config = {
+        "agent_name": "Legacy Agent",
+        "system_prompt": """You are a helpful AI assistant specialized in analyzing information and answering questions. 
+        Format your responses in markdown to make them visually appealing and easy to read.
+        Use the following context to answer the question.""",
+        "qdrant_collection": None,  # Will use module-based collection
+        "module": module
+    }
+    
+    async for chunk in get_agent_response_stream(question, agent_config, history):
+        yield chunk
+
+# Function for analyzing user answers (unchanged for now)
 async def get_answer_analysis(question: str, user_answer: str, guide: str, module: str = "module1") -> Dict:
     """
     Analyze a user's answer against a guide and relevant context.

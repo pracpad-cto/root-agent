@@ -38,6 +38,26 @@ class User(Base):
     # Relationships
     questions = relationship("Question", back_populates="user")
     responses = relationship("Response", back_populates="user")
+    created_agents = relationship("Agent", back_populates="creator")
+
+class Agent(Base):
+    """Agent model for storing chat agent configurations"""
+    __tablename__ = "agents"
+    
+    id = Column(String(50), primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
+    system_prompt = Column(Text, nullable=False)
+    icon = Column(String(10), default="robot")
+    qdrant_collection = Column(String(100))
+    is_active = Column(Boolean, default=True)
+    created_by = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    creator = relationship("User", back_populates="created_agents")
+    questions = relationship("Question", back_populates="agent")
 
 class Question(Base):
     """Question model for storing user questions"""
@@ -45,6 +65,7 @@ class Question(Base):
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    agent_id = Column(String(50), ForeignKey("agents.id"))
     text = Column(Text, nullable=False)
     module = Column(String(50), nullable=False, default="module1")
     unit = Column(String(50))
@@ -52,6 +73,7 @@ class Question(Base):
     
     # Relationships
     user = relationship("User", back_populates="questions")
+    agent = relationship("Agent", back_populates="questions")
     responses = relationship("Response", back_populates="question")
 
 class Response(Base):
